@@ -1,32 +1,30 @@
 import { Connection, Client } from '@temporalio/client';
-import { example } from './workflows';
+import { searchForPeople } from './workflows';
 import { nanoid } from 'nanoid';
+import { IRuleOperator } from './interfaces';
 
 async function run() {
   // Connect to the default Server location
   const connection = await Connection.connect({ address: 'localhost:7233' });
-  // In production, pass options to configure TLS and other settings:
-  // {
-  //   address: 'foo.bar.tmprl.cloud',
-  //   tls: {}
-  // }
 
+  // Create New Temporal Client
   const client = new Client({
     connection,
-    // namespace: 'foo.bar', // connects to 'default' namespace if not specified
   });
 
-  const handle = await client.workflow.start(example, {
+  // Start Workflow
+  const handle = await client.workflow.start(searchForPeople, {
     taskQueue: 'hello-world',
-    // type inference works! args: [name: string]
-    args: ['Temporal'],
-    // in practice, use a meaningful business ID, like customerId or transactionId
+    args: [
+      [
+        { propertyName: 'eye_color', value: 'red', operator: IRuleOperator.EQUALS },
+        { propertyName: 'name', value: '[0-9]', operator: IRuleOperator.CONTAINS },
+      ],
+    ],
     workflowId: 'workflow-' + nanoid(),
   });
   console.log(`Started workflow ${handle.workflowId}`);
-
-  // optional: wait for client result
-  console.log(await handle.result()); // Hello, Temporal!
+  console.log(await handle.result());
 }
 
 run().catch((err) => {
